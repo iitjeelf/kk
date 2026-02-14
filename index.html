@@ -70,27 +70,6 @@
             font-size: 14px;
         }
         
-        .quick-dates {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .date-btn {
-            padding: 6px 12px;
-            background: white;
-            border: 1px solid #cbd5e0;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-        
-        .date-btn:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
         .date-note {
             font-size: 12px;
             color: #718096;
@@ -267,7 +246,7 @@
             }
             
             .header, .date-section, .class-options, .folder-options, 
-            .upload-area, .action-buttons, .quick-dates, .date-btn,
+            .upload-area, .action-buttons,
             .notepad-header, .notepad-footer, .upload-btn, .file-list {
                 display: none !important;
             }
@@ -461,14 +440,9 @@
                     <label>📅 Select Date:</label>
                     <input type="date" id="selectedDate">
                 </div>
-                <div class="quick-dates">
-                    <button class="date-btn" data-days="0">Today</button>
-                    <button class="date-btn" data-days="-1">Yesterday</button>
-                    <button class="date-btn" data-days="-7">Last Week</button>
-                </div>
             </div>
             <div class="date-note">
-                ⓘ Date shows as DD/MM/YY in header and filename (e.g., 1D_14-02-26.txt)
+                ⓘ Date shows as DD/MM/YY in header and filename (e.g., 1M_14-02-26.txt)
             </div>
         </div>
         
@@ -516,10 +490,10 @@
                 <div class="notepad-header">
                     <h3>Answer Key - Class <span id="notepadClass">1D</span></h3>
                 </div>
-                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type A B C D letters - auto 5 per row&#10;Example: ABCDABCD"></textarea>
+                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type letters (A-D) or numbers - 5 per row auto-enter&#10;Example: ABCD5 12345"></textarea>
                 <div class="notepad-footer">
                     <div>Total answers: <span id="answerCount">0</span></div>
-                    <div>5 letters per row (auto-enter)</div>
+                    <div>5 per row (auto-enter)</div>
                 </div>
             </div>
             
@@ -564,18 +538,6 @@
             // Set today's date as default
             const today = new Date();
             dateInput.value = formatDateForInput(today);
-            
-            // Add quick date buttons
-            document.querySelectorAll('.date-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const days = parseInt(this.dataset.days);
-                    const date = new Date();
-                    date.setDate(date.getDate() + days);
-                    dateInput.value = formatDateForInput(date);
-                    updatePrintHeader();
-                });
-            });
-            
             dateInput.addEventListener('change', updatePrintHeader);
         }
         
@@ -614,7 +576,7 @@
             notepadContainer.insertBefore(printHeader, notepadContainer.firstChild);
         }
         
-        // ========== UI FUNCTIONS (KEEP YOUR EXISTING NOTEPAD BEHAVIOR) ==========
+        // ========== YOUR ORIGINAL NOTEPAD LOGIC ==========
         function setupEventListeners() {
             document.querySelectorAll('.class-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -649,7 +611,7 @@
                 updateUploadButton();
             });
             
-            // === YOUR EXISTING NOTEPAD LOGIC (5 LETTERS PER ROW WITH AUTO-ENTER) ===
+            // === YOUR ORIGINAL NOTEPAD LOGIC (5 LETTERS/NUMBERS PER ROW) ===
             const textarea = document.getElementById('notepadContent');
             
             textarea.addEventListener('keydown', function(e) {
@@ -657,7 +619,7 @@
                     return true;
                 }
                 
-                const allowedKeys = /^[a-dA-D]$/;
+                const allowedKeys = /^[a-dA-D0-9]$/;
                 if (!allowedKeys.test(e.key) && e.key.length === 1) {
                     e.preventDefault();
                     return false;
@@ -669,17 +631,17 @@
                 let value = textarea.value;
                 
                 value = value.toUpperCase();
-                value = value.replace(/[^ABCD\n]/g, '');
+                value = value.replace(/[^ABCD0-9\n]/g, '');
                 
                 const textBeforeCursor = value.substring(0, cursorPos);
                 const linesBefore = textBeforeCursor.split('\n');
                 const currentLine = linesBefore[linesBefore.length - 1];
                 
                 const typedChar = e.data ? e.data.toUpperCase() : '';
-                if (/^[ABCD]$/.test(typedChar)) {
-                    const lettersInLine = currentLine.replace(/[^ABCD]/g, '').length;
+                if (/^[ABCD0-9]$/.test(typedChar)) {
+                    const charsInLine = currentLine.replace(/[^ABCD0-9]/g, '').length;
                     
-                    if (lettersInLine === 5) {
+                    if (charsInLine === 5) {
                         const beforeText = value.substring(0, cursorPos);
                         const afterText = value.substring(cursorPos);
                         value = beforeText + '\n' + afterText;
@@ -706,7 +668,7 @@
                         continue;
                     }
                     
-                    if (/^[ABCD]+$/.test(line)) {
+                    if (/^[ABCD0-9]+$/.test(line)) {
                         for (let i = 0; i < line.length; i += 5) {
                             const chunk = line.substring(i, i + 5);
                             if (chunk) formattedLines.push(chunk);
@@ -797,9 +759,9 @@
         
         function updateAnswerCount() {
             const content = document.getElementById('notepadContent').value;
-            const letters = content.replace(/\n/g, '').split('');
-            const validLetters = letters.filter(l => l.match(/[ABCD]/));
-            document.getElementById('answerCount').textContent = validLetters.length;
+            const chars = content.replace(/\n/g, '').split('');
+            const validChars = chars.filter(c => c.match(/[ABCD0-9]/));
+            document.getElementById('answerCount').textContent = validChars.length;
         }
         
         function showAcknowledgement(title, message, isSuccess) {
@@ -901,41 +863,22 @@
                 throw new Error('Answer key is empty');
             }
             
-            // Remove newlines to get continuous letters
+            // Remove newlines to get continuous characters
             const flatContent = content.replace(/\n/g, '');
-            const letters = flatContent.split('');
+            const chars = flatContent.split('');
             
             // Format date
             const [year, month, day] = selectedDate.split('-');
             const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
             const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
             
-            // ===== PDF FORMAT: 10 numbered answers per row =====
-            // Format: 1).A 2).B 3).C 4).D 5).A 6).B 7).C 8).D 9).A 10).B
+            // ===== PDF FORMAT (keep your original format) =====
             let pdfContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
             pdfContent += `Date: ${shortDate}\n`;
-            pdfContent += `─${'─'.repeat(70)}\n\n`;
-            
-            let line = '';
-            for (let i = 0; i < letters.length; i++) {
-                if (letters[i].match(/[ABCD]/)) {
-                    line += `${i + 1}).${letters[i]} `;
-                    
-                    // After every 10 answers, add new line
-                    if ((i + 1) % 10 === 0) {
-                        pdfContent += line + '\n';
-                        line = '';
-                    }
-                }
-            }
-            
-            // Add remaining answers if any
-            if (line) {
-                pdfContent += line + '\n';
-            }
-            
-            pdfContent += `\n─${'─'.repeat(70)}`;
-            pdfContent += `\nTotal Questions: ${letters.length}`;
+            pdfContent += `─${'─'.repeat(60)}\n\n`;
+            pdfContent += content + '\n\n';
+            pdfContent += `─${'─'.repeat(60)}`;
+            pdfContent += `\nTotal Questions: ${chars.length}`;
             
             // Encode for GitHub
             const base64Content = btoa(unescape(encodeURIComponent(flatContent)));
@@ -957,7 +900,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with PDF format
+            // SEND TO GOOGLE DRIVE with section_date filename
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -965,7 +908,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         class: selectedClass,
-                        content: pdfContent,  // Send PDF format
+                        content: pdfContent,
                         rawContent: flatContent,
                         date: selectedDate,
                         shortDate: shortDate,
@@ -981,7 +924,7 @@
             
             showAcknowledgement(
                 'Answer Key Uploaded!',
-                `✅ Section ${section} | ${shortDate}\n📊 ${letters.length} questions\n📁 ${section}_${filenameDate}.txt`,
+                `✅ Section ${section} | ${shortDate}\n📊 ${chars.length} answers\n📁 ${section}_${filenameDate}.txt`,
                 true
             );
             
