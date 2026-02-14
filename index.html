@@ -746,16 +746,22 @@
             }
         }
         
-        function updateUploadButton() {
-            const uploadBtn = document.getElementById('uploadBtn');
-            
-            if (selectedFolder === 'questions') {
-                uploadBtn.disabled = selectedFiles.length === 0;
-            } else {
-                const content = document.getElementById('notepadContent').value.trim();
-                uploadBtn.disabled = content.length === 0;
-            }
-        }
+       function updateAnswerCount() {
+    const content = document.getElementById('notepadContent').value;
+    
+    // Count letters (A-D) - each letter is 1 answer
+    const letters = content.match(/[ABCD]/g) || [];
+    const letterCount = letters.length;
+    
+    // Count numbers - each continuous number is 1 answer (23 counts as 1)
+    const numberSequences = content.match(/[0-9]+/g) || [];
+    const numberCount = numberSequences.length;
+    
+    // Total answers = letters + number sequences
+    const totalAnswers = letterCount + numberCount;
+    
+    document.getElementById('answerCount').textContent = totalAnswers;
+}
         
         function updateAnswerCount() {
             const content = document.getElementById('notepadContent').value;
