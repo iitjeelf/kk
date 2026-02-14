@@ -516,7 +516,7 @@
 
     <script>
         // ========== CONFIGURATION ==========
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw2PG4hSyOg7XkNLmiMMnj1O10Xn6nGMTJXkZmjWGlBlY_b3hpsAhj0tJM45fZK16gN/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwYaO3L6-9puDvnQIDHxMr73sSdfKw8z7NEGvNWFo3I6gJKjYEq25nd-heHyuA5f0jz/exec';
         const GOOGLE_DRIVE_FOLDER_ID = '1yFI3rPq2UrPiyqTqFCOJ6UoiUtb7fQRf';
         
         // ========== STATE ==========
@@ -855,7 +855,7 @@
         async function uploadAnswerKey() {
             const className = selectedClass.toLowerCase();
             const textarea = document.getElementById('notepadContent');
-            let content = textarea.value.trim();
+            let content = textarea.value.trim(); // This has 5-per-row with newlines
             const selectedDate = document.getElementById('selectedDate').value;
             const section = selectedClass;
             
@@ -863,7 +863,7 @@
                 throw new Error('Answer key is empty');
             }
             
-            // Remove newlines to get continuous characters
+            // Remove newlines for counting only
             const flatContent = content.replace(/\n/g, '');
             const chars = flatContent.split('');
             
@@ -896,8 +896,8 @@
             pdfContent += `\n─${'─'.repeat(50)}`;
             pdfContent += `\nTotal Questions: ${chars.length}`;
             
-            // Encode for GitHub
-            const base64Content = btoa(unescape(encodeURIComponent(flatContent)));
+            // ===== GITHUB GETS SAME 5-PER-ROW FORMAT =====
+            const base64Content = btoa(unescape(encodeURIComponent(content))); // Use content with newlines
             
             // SEND TO GITHUB
             const formData = new FormData();
@@ -916,7 +916,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with section_date filename (NOT latest.txt)
+            // SEND TO GOOGLE DRIVE with section_date filename
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -930,8 +930,7 @@
                         shortDate: shortDate,
                         filenameDate: filenameDate,
                         section: section,
-                        folderId: GOOGLE_DRIVE_FOLDER_ID,
-                        isLatest: false // Ensure we don't save as latest.txt
+                        folderId: GOOGLE_DRIVE_FOLDER_ID
                     })
                 });
                 console.log('✅ Sent to Google Drive');
