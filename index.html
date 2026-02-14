@@ -442,7 +442,7 @@
                 </div>
             </div>
             <div class="date-note">
-                ⓘ Date shows as DD/MM/YY in header and filename (e.g., 1M_14-02-26.txt)
+                ⓘ Date shows as DD/MM/YY in header and filename (e.g., 1D_14-02-26.txt)
             </div>
         </div>
         
@@ -490,7 +490,7 @@
                 <div class="notepad-header">
                     <h3>Answer Key - Class <span id="notepadClass">1D</span></h3>
                 </div>
-                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type letters (A-D) or numbers - 5 per row auto-enter&#10;Example: ABCD5 12345"></textarea>
+                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type letters (A-D) or numbers - 5 per row auto-enter"></textarea>
                 <div class="notepad-footer">
                     <div>Total answers: <span id="answerCount">0</span></div>
                     <div>5 per row (auto-enter)</div>
@@ -872,12 +872,28 @@
             const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
             const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
             
-            // ===== PDF FORMAT (keep your original format) =====
+            // ===== PDF FORMAT: 1)A 2)B 3)C ... =====
             let pdfContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
             pdfContent += `Date: ${shortDate}\n`;
-            pdfContent += `─${'─'.repeat(60)}\n\n`;
-            pdfContent += content + '\n\n';
-            pdfContent += `─${'─'.repeat(60)}`;
+            pdfContent += `─${'─'.repeat(50)}\n\n`;
+            
+            // Format as 1)A 2)B 3)C ... (10 per row)
+            let line = '';
+            for (let i = 0; i < chars.length; i++) {
+                line += `${i+1})${chars[i]} `;
+                
+                // 10 per row
+                if ((i + 1) % 10 === 0) {
+                    pdfContent += line + '\n';
+                    line = '';
+                }
+            }
+            // Add remaining if any
+            if (line) {
+                pdfContent += line + '\n';
+            }
+            
+            pdfContent += `\n─${'─'.repeat(50)}`;
             pdfContent += `\nTotal Questions: ${chars.length}`;
             
             // Encode for GitHub
