@@ -874,24 +874,43 @@
                 throw new Error('Answer key is empty');
             }
             
-            // Remove newlines for counting only
+            // Parse content to treat multi-digit numbers as single entities
             const flatContent = content.replace(/\n/g, '');
-            const chars = flatContent.split('');
+            
+            // Extract tokens: letters (A-D) or numbers (multi-digit)
+            const tokens = [];
+            let i = 0;
+            while (i < flatContent.length) {
+                if (flatContent[i].match(/[ABCD]/)) {
+                    tokens.push(flatContent[i]);
+                    i++;
+                } else if (flatContent[i].match(/[0-9]/)) {
+                    // Grab the whole number
+                    let num = '';
+                    while (i < flatContent.length && flatContent[i].match(/[0-9]/)) {
+                        num += flatContent[i];
+                        i++;
+                    }
+                    tokens.push(num);
+                } else {
+                    i++;
+                }
+            }
             
             // Format date
             const [year, month, day] = selectedDate.split('-');
             const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
             const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
             
-            // ===== PDF FORMAT: 1)A 2)B 3)C ... =====
+            // ===== PDF FORMAT: 1)A 2)B 3)16 ... =====
             let pdfContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
             pdfContent += `Date: ${shortDate}\n`;
             pdfContent += `─${'─'.repeat(50)}\n\n`;
             
-            // Format as 1)A 2)B 3)C ... (10 per row)
+            // Format as 1)A 2)B 3)16 ... (10 per row)
             let line = '';
-            for (let i = 0; i < chars.length; i++) {
-                line += `${i+1})${chars[i]} `;
+            for (let i = 0; i < tokens.length; i++) {
+                line += `${i+1})${tokens[i]} `;
                 
                 // 10 per row
                 if ((i + 1) % 10 === 0) {
@@ -905,7 +924,7 @@
             }
             
             pdfContent += `\n─${'─'.repeat(50)}`;
-            pdfContent += `\nTotal Questions: ${chars.length}`;
+            pdfContent += `\nTotal Questions: ${tokens.length}`;
             
             // ===== GITHUB GETS SAME 5-PER-ROW FORMAT =====
             const base64Content = btoa(unescape(encodeURIComponent(content))); // Use content with newlines
@@ -951,7 +970,7 @@
             
             showAcknowledgement(
                 'Answer Key Uploaded!',
-                `✅ Section ${section} | ${shortDate}\n📊 ${chars.length} answers\n📁 ${section}_${filenameDate}.txt`,
+                `✅ Section ${section} | ${shortDate}\n📊 ${tokens.length} answers\n📁 ${section}_${filenameDate}.txt`,
                 true
             );
             
