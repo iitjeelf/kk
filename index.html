@@ -916,7 +916,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with section_date filename
+            // SEND TO GOOGLE DRIVE with section_date filename (NOT latest.txt)
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -930,7 +930,8 @@
                         shortDate: shortDate,
                         filenameDate: filenameDate,
                         section: section,
-                        folderId: GOOGLE_DRIVE_FOLDER_ID
+                        folderId: GOOGLE_DRIVE_FOLDER_ID,
+                        isLatest: false // Ensure we don't save as latest.txt
                     })
                 });
                 console.log('✅ Sent to Google Drive');
