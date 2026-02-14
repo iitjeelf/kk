@@ -284,10 +284,11 @@
             .notepad-textarea {
                 border: none;
                 height: auto;
-                font-size: 14px;
-                line-height: 1.8;
+                font-size: 12px;
                 background: white;
                 padding: 20px;
+                font-family: 'Courier New', monospace;
+                line-height: 1.8;
             }
             
             .main-content {
@@ -515,10 +516,10 @@
                 <div class="notepad-header">
                     <h3>Answer Key - Class <span id="notepadClass">1D</span></h3>
                 </div>
-                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type A B C D letters continuously&#10;Example: ABCDABCD"></textarea>
+                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type A B C D letters - auto 5 per row&#10;Example: ABCDABCD"></textarea>
                 <div class="notepad-footer">
                     <div>Total answers: <span id="answerCount">0</span></div>
-                    <div>Type letters only (A-D)</div>
+                    <div>5 letters per row (auto-enter)</div>
                 </div>
             </div>
             
@@ -613,7 +614,7 @@
             notepadContainer.insertBefore(printHeader, notepadContainer.firstChild);
         }
         
-        // ========== UI FUNCTIONS ==========
+        // ========== UI FUNCTIONS (KEEP YOUR EXISTING NOTEPAD BEHAVIOR) ==========
         function setupEventListeners() {
             document.querySelectorAll('.class-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -648,12 +649,88 @@
                 updateUploadButton();
             });
             
+            // === YOUR EXISTING NOTEPAD LOGIC (5 LETTERS PER ROW WITH AUTO-ENTER) ===
             const textarea = document.getElementById('notepadContent');
             
-            textarea.addEventListener('input', function() {
-                let value = this.value.toUpperCase();
+            textarea.addEventListener('keydown', function(e) {
+                if ([8, 9, 13, 16, 17, 18, 20, 27, 37, 38, 39, 40, 46].includes(e.keyCode)) {
+                    return true;
+                }
+                
+                const allowedKeys = /^[a-dA-D]$/;
+                if (!allowedKeys.test(e.key) && e.key.length === 1) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            textarea.addEventListener('input', function(e) {
+                const cursorPos = textarea.selectionStart;
+                let value = textarea.value;
+                
+                value = value.toUpperCase();
                 value = value.replace(/[^ABCD\n]/g, '');
-                this.value = value;
+                
+                const textBeforeCursor = value.substring(0, cursorPos);
+                const linesBefore = textBeforeCursor.split('\n');
+                const currentLine = linesBefore[linesBefore.length - 1];
+                
+                const typedChar = e.data ? e.data.toUpperCase() : '';
+                if (/^[ABCD]$/.test(typedChar)) {
+                    const lettersInLine = currentLine.replace(/[^ABCD]/g, '').length;
+                    
+                    if (lettersInLine === 5) {
+                        const beforeText = value.substring(0, cursorPos);
+                        const afterText = value.substring(cursorPos);
+                        value = beforeText + '\n' + afterText;
+                        
+                        textarea.value = value;
+                        
+                        const newCursorPos = cursorPos + 1;
+                        setTimeout(() => {
+                            textarea.setSelectionRange(newCursorPos, newCursorPos);
+                        }, 0);
+                        
+                        updateAnswerCount();
+                        updateUploadButton();
+                        return;
+                    }
+                }
+                
+                const lines = value.split('\n');
+                let formattedLines = [];
+                
+                for (let line of lines) {
+                    if (line.length === 0) {
+                        formattedLines.push('');
+                        continue;
+                    }
+                    
+                    if (/^[ABCD]+$/.test(line)) {
+                        for (let i = 0; i < line.length; i += 5) {
+                            const chunk = line.substring(i, i + 5);
+                            if (chunk) formattedLines.push(chunk);
+                        }
+                    } else {
+                        formattedLines.push(line);
+                    }
+                }
+                
+                const newValue = formattedLines.join('\n');
+                
+                if (newValue !== value) {
+                    textarea.value = newValue;
+                    
+                    let newCursorPos = cursorPos;
+                    if (newValue.length !== value.length) {
+                        newCursorPos = Math.max(0, Math.min(cursorPos, newValue.length));
+                    }
+                    
+                    setTimeout(() => {
+                        textarea.setSelectionRange(newCursorPos, newCursorPos);
+                    }, 0);
+                }
+                
                 updateAnswerCount();
                 updateUploadButton();
             });
@@ -824,7 +901,7 @@
                 throw new Error('Answer key is empty');
             }
             
-            // Remove newlines and get continuous letters
+            // Remove newlines to get continuous letters
             const flatContent = content.replace(/\n/g, '');
             const letters = flatContent.split('');
             
@@ -833,29 +910,32 @@
             const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
             const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
             
-            // ===== CREATE TWO-ROW FORMAT =====
-            // Row 1: Numbers 1 2 3 4 5 ...
-            // Row 2: A B C D A ...
+            // ===== PDF FORMAT: 10 numbered answers per row =====
+            // Format: 1).A 2).B 3).C 4).D 5).A 6).B 7).C 8).D 9).A 10).B
+            let pdfContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
+            pdfContent += `Date: ${shortDate}\n`;
+            pdfContent += `─${'─'.repeat(70)}\n\n`;
             
-            let numberRow = '';
-            let letterRow = '';
-            
+            let line = '';
             for (let i = 0; i < letters.length; i++) {
                 if (letters[i].match(/[ABCD]/)) {
-                    // Add number (right-aligned)
-                    numberRow += (i + 1).toString().padStart(3, ' ') + ' ';
-                    // Add letter
-                    letterRow += '  ' + letters[i] + '  ';
+                    line += `${i + 1}).${letters[i]} `;
+                    
+                    // After every 10 answers, add new line
+                    if ((i + 1) % 10 === 0) {
+                        pdfContent += line + '\n';
+                        line = '';
+                    }
                 }
             }
             
-            let tableContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
-            tableContent += `Date: ${shortDate}\n`;
-            tableContent += `─${'─'.repeat(60)}\n\n`;
-            tableContent += numberRow + '\n';
-            tableContent += letterRow + '\n';
-            tableContent += `\n─${'─'.repeat(60)}`;
-            tableContent += `\nTotal Questions: ${letters.length}`;
+            // Add remaining answers if any
+            if (line) {
+                pdfContent += line + '\n';
+            }
+            
+            pdfContent += `\n─${'─'.repeat(70)}`;
+            pdfContent += `\nTotal Questions: ${letters.length}`;
             
             // Encode for GitHub
             const base64Content = btoa(unescape(encodeURIComponent(flatContent)));
@@ -877,7 +957,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with filename: SECTION_DD-MM-YY.txt
+            // SEND TO GOOGLE DRIVE with PDF format
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -885,7 +965,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         class: selectedClass,
-                        content: tableContent,
+                        content: pdfContent,  // Send PDF format
                         rawContent: flatContent,
                         date: selectedDate,
                         shortDate: shortDate,
