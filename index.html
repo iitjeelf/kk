@@ -39,7 +39,6 @@
             margin-bottom: 5px;
         }
         
-        /* NEW DATE SECTION STYLES */
         .date-section {
             background: #f0f4f8;
             padding: 15px 30px;
@@ -236,7 +235,6 @@
             font-size: 16px;
         }
         
-        /* PRINT HEADER STYLES */
         .print-header {
             display: none;
             background: #f8f9fa;
@@ -456,7 +454,6 @@
             <p>Upload questions and answer keys</p>
         </div>
         
-        <!-- NEW DATE SECTION -->
         <div class="date-section">
             <div class="date-container">
                 <div class="date-picker">
@@ -470,7 +467,7 @@
                 </div>
             </div>
             <div class="date-note">
-                ⓘ This date will appear on printouts and organize files in Google Drive
+                ⓘ Date shows as DD/MM/YY in header and filename (e.g., 1D_14-02-26.txt)
             </div>
         </div>
         
@@ -515,14 +512,13 @@
             </div>
             
             <div class="notepad-container" id="notepadContainer" style="display: none;">
-                <!-- PRINT HEADER WILL BE INSERTED HERE BY JAVASCRIPT -->
                 <div class="notepad-header">
                     <h3>Answer Key - Class <span id="notepadClass">1D</span></h3>
                 </div>
-                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type A, B, C, D or numbers..."></textarea>
+                <textarea class="notepad-textarea" id="notepadContent" placeholder="Type A B C D letters continuously&#10;Example: ABCDABCD"></textarea>
                 <div class="notepad-footer">
                     <div>Total answers: <span id="answerCount">0</span></div>
-                    <div>Letters: auto 5/row, Numbers: press ENTER</div>
+                    <div>Type letters only (A-D)</div>
                 </div>
             </div>
             
@@ -545,7 +541,7 @@
 
     <script>
         // ========== CONFIGURATION ==========
-        const GAS_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // REPLACE THIS
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwYaO3L6-9puDvnQIDHxMr73sSdfKw8z7NEGvNWFo3I6gJKjYEq25nd-heHyuA5f0jz/exec';
         const GOOGLE_DRIVE_FOLDER_ID = '1yFI3rPq2UrPiyqTqFCOJ6UoiUtb7fQRf';
         
         // ========== STATE ==========
@@ -579,7 +575,6 @@
                 });
             });
             
-            // Update print header when date changes
             dateInput.addEventListener('change', updatePrintHeader);
         }
         
@@ -592,37 +587,29 @@
         
         function formatDateForDisplay(dateStr) {
             const [year, month, day] = dateStr.split('-');
-            const date = new Date(year, month - 1, day);
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
+            return `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
         }
         
-        // ========== PRINT HEADER FUNCTIONS ==========
+        // ========== PRINT HEADER ==========
         function updatePrintHeader() {
             const notepadContainer = document.getElementById('notepadContainer');
             const selectedDate = document.getElementById('selectedDate').value;
-            const formattedDate = formatDateForDisplay(selectedDate);
+            const shortDate = formatDateForDisplay(selectedDate);
             
-            // Remove existing print header if any
             const existingHeader = document.getElementById('printHeader');
             if (existingHeader) {
                 existingHeader.remove();
             }
             
-            // Create new print header
             const printHeader = document.createElement('div');
             printHeader.id = 'printHeader';
             printHeader.className = 'print-header';
             printHeader.innerHTML = `
-                <h2>LFJC ANSWER KEY - CLASS ${selectedClass}</h2>
-                <p>Date: ${formattedDate}</p>
+                <h2>LFJC ANSWER KEY - SECTION ${selectedClass}</h2>
+                <p>Date: ${shortDate}</p>
                 <hr>
             `;
             
-            // Insert at the beginning of notepad container
             notepadContainer.insertBefore(printHeader, notepadContainer.firstChild);
         }
         
@@ -663,85 +650,10 @@
             
             const textarea = document.getElementById('notepadContent');
             
-            textarea.addEventListener('keydown', function(e) {
-                if ([8, 9, 13, 16, 17, 18, 20, 27, 37, 38, 39, 40, 46].includes(e.keyCode)) {
-                    return true;
-                }
-                
-                const allowedKeys = /^[a-dA-D0-9]$/;
-                if (!allowedKeys.test(e.key) && e.key.length === 1) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-            
-            textarea.addEventListener('input', function(e) {
-                const cursorPos = textarea.selectionStart;
-                let value = textarea.value;
-                
-                value = value.toUpperCase();
-                value = value.replace(/[^ABCD0-9\n]/g, '');
-                
-                const textBeforeCursor = value.substring(0, cursorPos);
-                const linesBefore = textBeforeCursor.split('\n');
-                const currentLine = linesBefore[linesBefore.length - 1];
-                
-                const typedChar = e.data ? e.data.toUpperCase() : '';
-                if (/^[ABCD]$/.test(typedChar)) {
-                    const lettersInLine = currentLine.replace(/[^ABCD]/g, '').length;
-                    
-                    if (lettersInLine === 5) {
-                        const beforeText = value.substring(0, cursorPos);
-                        const afterText = value.substring(cursorPos);
-                        value = beforeText + '\n' + afterText;
-                        
-                        textarea.value = value;
-                        
-                        const newCursorPos = cursorPos + 1;
-                        setTimeout(() => {
-                            textarea.setSelectionRange(newCursorPos, newCursorPos);
-                        }, 0);
-                        
-                        updateAnswerCount();
-                        updateUploadButton();
-                        return;
-                    }
-                }
-                
-                const lines = value.split('\n');
-                let formattedLines = [];
-                
-                for (let line of lines) {
-                    if (line.length === 0) {
-                        formattedLines.push('');
-                        continue;
-                    }
-                    
-                    if (/^[ABCD]+$/.test(line)) {
-                        for (let i = 0; i < line.length; i += 5) {
-                            const chunk = line.substring(i, i + 5);
-                            if (chunk) formattedLines.push(chunk);
-                        }
-                    } else {
-                        formattedLines.push(line);
-                    }
-                }
-                
-                const newValue = formattedLines.join('\n');
-                
-                if (newValue !== value) {
-                    textarea.value = newValue;
-                    
-                    let newCursorPos = cursorPos;
-                    if (newValue.length !== value.length) {
-                        newCursorPos = Math.max(0, Math.min(cursorPos, newValue.length));
-                    }
-                    
-                    setTimeout(() => {
-                        textarea.setSelectionRange(newCursorPos, newCursorPos);
-                    }, 0);
-                }
-                
+            textarea.addEventListener('input', function() {
+                let value = this.value.toUpperCase();
+                value = value.replace(/[^ABCD\n]/g, '');
+                this.value = value;
                 updateAnswerCount();
                 updateUploadButton();
             });
@@ -808,14 +720,9 @@
         
         function updateAnswerCount() {
             const content = document.getElementById('notepadContent').value;
-            
-            const letters = content.match(/[ABCD]/g);
-            const numbers = content.match(/\d+/g);
-            
-            const letterCount = letters ? letters.length : 0;
-            const numberCount = numbers ? numbers.length : 0;
-            
-            document.getElementById('answerCount').textContent = letterCount + numberCount;
+            const letters = content.replace(/\n/g, '').split('');
+            const validLetters = letters.filter(l => l.match(/[ABCD]/));
+            document.getElementById('answerCount').textContent = validLetters.length;
         }
         
         function showAcknowledgement(title, message, isSuccess) {
@@ -911,32 +818,47 @@
             const textarea = document.getElementById('notepadContent');
             let content = textarea.value.trim();
             const selectedDate = document.getElementById('selectedDate').value;
+            const section = selectedClass;
             
             if (content.length === 0) {
                 throw new Error('Answer key is empty');
             }
             
-            const valid = content.replace(/[ABCD0-9\n]/g, '');
-            if (valid.length > 0) {
-                throw new Error('Only A, B, C, D letters or numbers 0-9 allowed');
+            // Remove newlines and get continuous letters
+            const flatContent = content.replace(/\n/g, '');
+            const letters = flatContent.split('');
+            
+            // Format date
+            const [year, month, day] = selectedDate.split('-');
+            const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
+            const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
+            
+            // ===== CREATE TWO-ROW FORMAT =====
+            // Row 1: Numbers 1 2 3 4 5 ...
+            // Row 2: A B C D A ...
+            
+            let numberRow = '';
+            let letterRow = '';
+            
+            for (let i = 0; i < letters.length; i++) {
+                if (letters[i].match(/[ABCD]/)) {
+                    // Add number (right-aligned)
+                    numberRow += (i + 1).toString().padStart(3, ' ') + ' ';
+                    // Add letter
+                    letterRow += '  ' + letters[i] + '  ';
+                }
             }
             
-            // Format content with numbers for printout
-            const lines = content.split('\n');
-            let numberedContent = `LFJC ANSWER KEY - CLASS ${selectedClass}\n`;
-            numberedContent += `Date: ${formatDateForDisplay(selectedDate)}\n`;
-            numberedContent += `Teacher: _________________\n`;
-            numberedContent += `Signature: _________________\n`;
-            numberedContent += `─${'─'.repeat(50)}\n\n`;
-            
-            lines.forEach((line, index) => {
-                if (line.trim()) {
-                    numberedContent += `${index + 1}. ${line}\n`;
-                }
-            });
+            let tableContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
+            tableContent += `Date: ${shortDate}\n`;
+            tableContent += `─${'─'.repeat(60)}\n\n`;
+            tableContent += numberRow + '\n';
+            tableContent += letterRow + '\n';
+            tableContent += `\n─${'─'.repeat(60)}`;
+            tableContent += `\nTotal Questions: ${letters.length}`;
             
             // Encode for GitHub
-            const base64Content = btoa(unescape(encodeURIComponent(content)));
+            const base64Content = btoa(unescape(encodeURIComponent(flatContent)));
             
             // SEND TO GITHUB
             const formData = new FormData();
@@ -955,7 +877,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with FOLDER ID and DATE
+            // SEND TO GOOGLE DRIVE with filename: SECTION_DD-MM-YY.txt
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -963,9 +885,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         class: selectedClass,
-                        content: numberedContent, // Send formatted content
-                        rawContent: content, // Send raw for counting
+                        content: tableContent,
+                        rawContent: flatContent,
                         date: selectedDate,
+                        shortDate: shortDate,
+                        filenameDate: filenameDate,
+                        section: section,
                         folderId: GOOGLE_DRIVE_FOLDER_ID
                     })
                 });
@@ -974,18 +899,12 @@
                 console.log('Google Drive backup optional:', e);
             }
             
-            const letters = content.match(/[ABCD]/g);
-            const numbers = content.match(/\d+/g);
-            const letterCount = letters ? letters.length : 0;
-            const numberCount = numbers ? numbers.length : 0;
-            
             showAcknowledgement(
                 'Answer Key Uploaded!',
-                `✅ GitHub + Google Drive\n📅 Date: ${formatDateForDisplay(selectedDate)}\n📊 ${letterCount} letters, ${numberCount} numbers\n🖨️ Ready for printout`,
+                `✅ Section ${section} | ${shortDate}\n📊 ${letters.length} questions\n📁 ${section}_${filenameDate}.txt`,
                 true
             );
             
-            // Clear notepad after successful upload
             textarea.value = '';
             updateAnswerCount();
             updateUploadButton();
