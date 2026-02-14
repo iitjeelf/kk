@@ -763,13 +763,7 @@
     document.getElementById('answerCount').textContent = totalAnswers;
 }
         
-        function updateAnswerCount() {
-            const content = document.getElementById('notepadContent').value;
-            const chars = content.replace(/\n/g, '').split('');
-            const validChars = chars.filter(c => c.match(/[ABCD0-9]/));
-            document.getElementById('answerCount').textContent = validChars.length;
-        }
-        
+              
         function showAcknowledgement(title, message, isSuccess) {
             const overlay = document.getElementById('acknowledgementOverlay');
             const icon = document.getElementById('ackIcon');
