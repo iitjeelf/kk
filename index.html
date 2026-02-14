@@ -757,7 +757,7 @@
             }
         }
         
-        // ===== UPDATED ANSWER COUNT FUNCTION (23 counts as 1) =====
+        // ===== ANSWER COUNT FUNCTION: Each letter = 1, Each number sequence = 1 =====
         function updateAnswerCount() {
             const content = document.getElementById('notepadContent').value;
             
@@ -866,7 +866,7 @@
         async function uploadAnswerKey() {
             const className = selectedClass.toLowerCase();
             const textarea = document.getElementById('notepadContent');
-            let content = textarea.value.trim(); // This has 5-per-row with newlines
+            let content = textarea.value.trim();
             const selectedDate = document.getElementById('selectedDate').value;
             const section = selectedClass;
             
@@ -874,40 +874,39 @@
                 throw new Error('Answer key is empty');
             }
             
-            // Parse content to treat multi-digit numbers as single entities
-            const flatContent = content.replace(/\n/g, '');
-            
-            // Extract tokens: letters (A-D) or numbers (multi-digit)
+            // Process each line, then each character/number sequence
+            const lines = content.split('\n').filter(line => line.trim() !== '');
             const tokens = [];
-            let i = 0;
-            while (i < flatContent.length) {
-                if (flatContent[i].match(/[ABCD]/)) {
-                    tokens.push(flatContent[i]);
-                    i++;
-                } else if (flatContent[i].match(/[0-9]/)) {
-                    // Grab the whole number
-                    let num = '';
-                    while (i < flatContent.length && flatContent[i].match(/[0-9]/)) {
-                        num += flatContent[i];
+            
+            for (let line of lines) {
+                let i = 0;
+                while (i < line.length) {
+                    if (line[i].match(/[ABCD]/)) {
+                        tokens.push(line[i]);
+                        i++;
+                    } else if (line[i].match(/[0-9]/)) {
+                        let num = '';
+                        while (i < line.length && line[i].match(/[0-9]/)) {
+                            num += line[i];
+                            i++;
+                        }
+                        tokens.push(num);
+                    } else {
                         i++;
                     }
-                    tokens.push(num);
-                } else {
-                    i++;
                 }
             }
             
             // Format date
             const [year, month, day] = selectedDate.split('-');
-            const shortDate = `${day}/${month}/${year.slice(-2)}`; // DD/MM/YY
-            const filenameDate = `${day}-${month}-${year.slice(-2)}`; // DD-MM-YY
+            const shortDate = `${day}/${month}/${year.slice(-2)}`;
+            const filenameDate = `${day}-${month}-${year.slice(-2)}`;
             
-            // ===== PDF FORMAT: 1)A 2)B 3)16 ... =====
+            // ===== PDF FORMAT: 1)A 2)B 3)C 4)23 5)D =====
             let pdfContent = `LFJC ANSWER KEY - SECTION ${section}\n`;
             pdfContent += `Date: ${shortDate}\n`;
             pdfContent += `─${'─'.repeat(50)}\n\n`;
             
-            // Format as 1)A 2)B 3)16 ... (10 per row)
             let line = '';
             for (let i = 0; i < tokens.length; i++) {
                 line += `${i+1})${tokens[i]} `;
@@ -918,7 +917,6 @@
                     line = '';
                 }
             }
-            // Add remaining if any
             if (line) {
                 pdfContent += line + '\n';
             }
@@ -927,7 +925,7 @@
             pdfContent += `\nTotal Questions: ${tokens.length}`;
             
             // ===== GITHUB GETS SAME 5-PER-ROW FORMAT =====
-            const base64Content = btoa(unescape(encodeURIComponent(content))); // Use content with newlines
+            const base64Content = btoa(unescape(encodeURIComponent(content)));
             
             // SEND TO GITHUB
             const formData = new FormData();
@@ -946,7 +944,7 @@
                 throw new Error('Failed to upload answer key: ' + result.message);
             }
             
-            // SEND TO GOOGLE DRIVE with section_date filename
+            // SEND TO GOOGLE DRIVE
             try {
                 await fetch(GAS_URL, {
                     method: 'POST',
@@ -955,7 +953,7 @@
                     body: JSON.stringify({
                         class: selectedClass,
                         content: pdfContent,
-                        rawContent: flatContent,
+                        rawContent: content,
                         date: selectedDate,
                         shortDate: shortDate,
                         filenameDate: filenameDate,
